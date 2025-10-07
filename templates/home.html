@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="hero">
+  <div class="hero-card float">
+    <h1>Early Dementia Detection Using AI</h1>
+    <p>Accessible, low-cost web-based screening tool.</p>
+    <div class="cta">
+      <a class="button primary" href="{{ url_for('screening_page') }}">Start Screening</a>
+      <a class="button secondary" href="#about">Learn More</a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Features</h2>
+  <div class="grid cols-3">
+    <div class="card">
+      <img class="icon" src="{{ url_for('static', filename='icons/logo.svg') }}" alt="Speech" />
+      <h3>Speech Analysis</h3>
+      <p>Analyze pauses, fluency, and clarity via voice recording.</p>
+    </div>
+    <div class="card">
+      <img class="icon" src="{{ url_for('static', filename='icons/logo.svg') }}" alt="Memory" />
+      <h3>Memory Test</h3>
+      <p>Quick recall game to assess short-term memory performance.</p>
+    </div>
+    <div class="card">
+      <img class="icon" src="{{ url_for('static', filename='icons/logo.svg') }}" alt="Emotion" />
+      <h3>Emotion Detection</h3>
+      <p>Webcam-based expression check for confusion or stress.</p>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="section">
+  <div class="grid">
+    <div class="card">
+      <h3>Impact</h3>
+      <p class="note">Early screening enables timely support. This prototype demonstrates explainable AI-driven insights with a calming, elder-friendly experience.</p>
+    </div>
+    <div class="card">
+      <h3>Daily Check-In</h3>
+      <p class="note">What did you eat today?</p>
+      <form id="checkin-form" class="test-actions">
+        <input id="checkin-input" type="text" placeholder="Type here..." aria-label="Daily check-in"/>
+        <button class="button primary" type="submit">Save</button>
+      </form>
+      <div id="checkin-history" class="note"></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const checkinForm = document.getElementById('checkin-form');
+  const input = document.getElementById('checkin-input');
+  const historyEl = document.getElementById('checkin-history');
+  const key = 'daily-checkins';
+  const load = () => {
+    try { const data = JSON.parse(localStorage.getItem(key)) || []; historyEl.textContent = data.slice(-5).map(x=>`• ${x}`).join('  ');} catch {}
+  };
+  load();
+  checkinForm?.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const v = input.value.trim(); if(!v) return;
+    const data = JSON.parse(localStorage.getItem(key) || '[]');
+    data.push(v); localStorage.setItem(key, JSON.stringify(data)); input.value=''; load();
+  });
+</script>
+{% endblock %}
