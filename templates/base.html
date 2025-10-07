@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Tool for Early Dementia Detection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="{{ url_for('home_page') }}" class="brand" aria-label="Dementia AI Home">
+        <img src="{{ url_for('static', filename='icons/logo.svg') }}" alt="Logo" class="logo" />
+      </a>
+      <nav class="nav">
+        <a href="{{ url_for('home_page') }}">Home</a>
+        <a href="{{ url_for('screening_page') }}">Screening</a>
+        <a href="{{ url_for('results_page') }}">Results</a>
+        <a href="{{ url_for('dashboard_page') }}">Dashboard</a>
+      </nav>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Contact:</strong> care@dementia-ai.example
+      </div>
+      <div class="privacy-note">Your data is securely stored and shared only with consent.</div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+      // Consent banner
+      (function(){
+        const key='consent-given';
+        const consent = localStorage.getItem(key);
+        if(!consent){
+          const bar = document.createElement('div');
+          bar.setAttribute('role','dialog');
+          bar.ariaLabel='Privacy consent';
+          bar.style.cssText='position:fixed;bottom:12px;left:12px;right:12px;background:#0f172a;color:white;padding:12px 16px;border-radius:12px;display:flex;gap:12px;align-items:center;z-index:50;box-shadow:0 10px 20px rgba(0,0,0,.2)';
+          bar.innerHTML = '<div>We use your mic/camera only for this screening. Data is stored locally and shared only with your consent.</div>';
+          const btn = document.createElement('button');
+          btn.className='button primary'; btn.textContent='I Understand';
+          btn.onclick=()=>{ localStorage.setItem(key,'1'); bar.remove(); };
+          bar.appendChild(btn); document.body.appendChild(bar);
+        }
+      })();
+    </script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

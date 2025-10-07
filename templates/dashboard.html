@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <h2>Dashboard</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>History</h3>
+      <table class="table" id="hist-table">
+        <thead><tr><th>Date</th><th>Speech</th><th>Memory</th><th>Emotion</th><th>Risk</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Trend</h3>
+      <canvas id="trend" height="120"></canvas>
+    </div>
+    <div class="card">
+      <h3>Encouragement</h3>
+      <p id="encourage" class="affirm">Keep it up! Consistency builds resilience.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const history = JSON.parse(localStorage.getItem('history')||'[]');
+  const tbody = document.querySelector('#hist-table tbody');
+  tbody.innerHTML = history.slice(-20).reverse().map(h=>`<tr>
+    <td>${new Date(h.timestamp).toLocaleString()}</td>
+    <td>${Math.round(h.speech*100)}%</td>
+    <td>${Math.round(h.memory*100)}%</td>
+    <td>${Math.round(h.emotion*100)}%</td>
+    <td>${Math.round(h.riskScore*100)}%</td>
+  </tr>`).join('');
+
+  const ctx = document.getElementById('trend');
+  new Chart(ctx, { type:'line', data:{
+    labels: history.map(h=> new Date(h.timestamp).toLocaleDateString()),
+    datasets:[{
+      label:'Risk %', data: history.map(h=> Math.round(h.riskScore*100)),
+      borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.1)', tension:.35
+    }]
+  }, options:{ scales:{ y:{ beginAtZero:true, max:100 }}}});
+
+  const recent = history.slice(-2);
+  if(recent.length===2){
+    const diff = Math.round((recent[1].memory - recent[0].memory)*100);
+    if(diff>0){ document.getElementById('encourage').textContent = `Great! You improved your memory by ${diff}%`; }
+  }
+</script>
+{% endblock %}

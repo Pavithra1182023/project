@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <h2>Results</h2>
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Speech</h3>
+      <div id="speech-val" class="affirm">—</div>
+      <p id="speech-why" class="note"></p>
+    </div>
+    <div class="card">
+      <h3>Memory</h3>
+      <div id="memory-val" class="affirm">—</div>
+      <p id="memory-why" class="note"></p>
+    </div>
+    <div class="card">
+      <h3>Emotion</h3>
+      <div id="emotion-val" class="affirm">—</div>
+      <p id="emotion-why" class="note"></p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>AI Dementia Risk Score</h3>
+    <div class="gauge"><div id="gauge-fill" class="fill"></div></div>
+    <div id="risk-label" class="note"></div>
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <h3>Progress Over Time</h3>
+      <canvas id="history-chart" height="120"></canvas>
+    </div>
+    <div class="card">
+      <h3>Recommendations</h3>
+      <ul>
+        <li>Try daily number recall puzzles for 5 minutes.</li>
+        <li>Meditation and regular walks may help overall well-being.</li>
+        <li>Consider consulting a clinician for comprehensive assessment if concerned.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  const latest = JSON.parse(sessionStorage.getItem('latestResult')||'{}');
+  const { speech, memory, emotion, riskScore, why } = latest;
+  document.getElementById('speech-val').textContent = `${Math.round((speech||0)*100)}%`;
+  document.getElementById('memory-val').textContent = `${Math.round((memory||0)*100)}%`;
+  document.getElementById('emotion-val').textContent = `${Math.round((emotion||0)*100)}%`;
+  document.getElementById('speech-why').textContent = why?.speech || '';
+  document.getElementById('memory-why').textContent = why?.memory || '';
+  document.getElementById('emotion-why').textContent = why?.emotion || '';
+  const fill = document.getElementById('gauge-fill');
+  const label = document.getElementById('risk-label');
+  const pct = Math.round((riskScore||0)*100);
+  fill.style.width = pct + '%';
+  label.textContent = `Risk: ${pct}%`;
+
+  // Chart history
+  const history = JSON.parse(localStorage.getItem('history')||'[]');
+  const ctx = document.getElementById('history-chart');
+  new Chart(ctx, { type:'line', data:{
+    labels: history.map(h=> new Date(h.timestamp).toLocaleDateString()),
+    datasets:[{
+      label:'Risk %', data: history.map(h=> Math.round(h.riskScore*100)),
+      borderColor:'#2563eb', backgroundColor:'rgba(37,99,235,.1)', tension:.3
+    }]
+  }, options:{ scales:{ y:{ beginAtZero:true, max:100 }}}});
+</script>
+{% endblock %}

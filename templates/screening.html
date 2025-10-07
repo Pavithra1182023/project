@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="section">
+  <h2>AI Screening</h2>
+  <div class="stepper">
+    <div class="step" id="s1">1. Voice Test</div>
+    <div class="step" id="s2">2. Cognitive Test</div>
+    <div class="step" id="s3">3. Webcam Emotion Test</div>
+  </div>
+
+  <div id="panel-voice" class="card test-panel">
+    <h3>Step 1: Voice Test</h3>
+    <p class="note">Read the sentence: "Today I am feeling calm and focused." We analyze pauses, fluency, and clarity.</p>
+    <div class="test-actions">
+      <button class="button primary" id="btn-start-rec">Start Recording</button>
+      <button class="button" id="btn-stop-rec" disabled>Stop</button>
+      <span id="voice-status" class="note">Idle</span>
+    </div>
+  </div>
+
+  <div id="panel-cog" class="card test-panel" style="display:none">
+    <h3>Step 2: Cognitive Test</h3>
+    <p class="note">Remember the sequence and repeat it.</p>
+    <div id="sequence" class="note"></div>
+    <div class="test-actions">
+      <button id="btn-show-seq" class="button">Show Sequence</button>
+      <input id="seq-input" type="text" placeholder="Enter numbers e.g. 2 5 1"/>
+      <button id="btn-check-seq" class="button primary">Check</button>
+      <span id="seq-result" class="note"></span>
+    </div>
+  </div>
+
+  <div id="panel-cam" class="card test-panel" style="display:none">
+    <h3>Step 3: Webcam Emotion Test</h3>
+    <p class="note">We capture a short snapshot to analyze signs of confusion or stress.</p>
+    <video id="cam" width="360" height="240" autoplay playsinline muted style="background:#000;border-radius:8px"></video>
+    <canvas id="frame" width="360" height="240" style="display:none"></canvas>
+    <div class="test-actions">
+      <button id="btn-start-cam" class="button">Enable Camera</button>
+      <button id="btn-capture" class="button primary" disabled>Capture Snapshot</button>
+      <span id="cam-status" class="note">Camera off</span>
+    </div>
+  </div>
+
+  <div class="test-actions" style="margin-top:12px">
+    <button id="btn-next" class="button primary">Next Step</button>
+    <button id="btn-generate" class="button" disabled>Generate Risk Score</button>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  let current = 1;
+  const steps = [document.getElementById('s1'), document.getElementById('s2'), document.getElementById('s3')];
+  const panels = [document.getElementById('panel-voice'), document.getElementById('panel-cog'), document.getElementById('panel-cam')];
+  const nextBtn = document.getElementById('btn-next');
+  const genBtn = document.getElementById('btn-generate');
+  const setStep = (n)=>{
+    current = n; steps.forEach((e,i)=> e.classList.toggle('active', i+1===n));
+    panels.forEach((p,i)=> p.style.display = (i+1===n)?'grid':'none');
+    genBtn.disabled = current !== 3;
+  };
+  setStep(1);
+  // Voice guidance
+  try { AppUtil.speak('Welcome. We will start with a short voice test.'); } catch {}
+
+  // Voice test (mock analysis of pauses/fluency)
+  const startBtn = document.getElementById('btn-start-rec');
+  const stopBtn = document.getElementById('btn-stop-rec');
+  const statusEl = document.getElementById('voice-status');
+  let mediaRecorder; let chunks=[]; let voiceScore=0.7;
+  startBtn.onclick = async () => {
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      chunks=[]; mediaRecorder.ondataavailable = e=> chunks.push(e.data);
+      mediaRecorder.onstop = async ()=>{
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        statusEl.textContent = 'Analyzing...';
+        // Placeholder API call
+        const form = new FormData(); form.append('audio', blob, 'sample.webm');
+        try{
+          const res = await fetch('/api/analyze-speech', { method:'POST', body: form });
+          const data = await res.json();
+          voiceScore = data.fluency || 0.7; // 0..1
+          statusEl.textContent = `Fluency: ${(voiceScore*100).toFixed(0)}%`;
+        }catch{
+          statusEl.textContent = 'Analysis failed, using mock score.';
+        }
+      }
+      mediaRecorder.start();
+      statusEl.textContent = 'Recording...';
+      startBtn.disabled = true; stopBtn.disabled = false;
+    }catch(e){ statusEl.textContent = 'Mic permission denied.' }
+  };
+  stopBtn.onclick = ()=>{ mediaRecorder?.stop(); startBtn.disabled=false; stopBtn.disabled=true; };
+
+  // Cognitive test (sequence recall)
+  const seqEl = document.getElementById('sequence');
+  const showBtn = document.getElementById('btn-show-seq');
+  const checkBtn = document.getElementById('btn-check-seq');
+  const input = document.getElementById('seq-input');
+  const resultEl = document.getElementById('seq-result');
+  let targetSeq = [];
+  let memoryScore = 0.7;
+  const generateSeq = () => Array.from({length: 4 + Math.floor(Math.random()*3)}, ()=> Math.floor(Math.random()*9));
+  showBtn.onclick = () => {
+    targetSeq = generateSeq();
+    seqEl.textContent = 'Sequence: ' + targetSeq.join(' ');
+    setTimeout(()=> seqEl.textContent = 'Now type the sequence', 1500);
+  };
+  checkBtn.onclick = () => {
+    const answers = input.value.trim().split(/\s+/).map(Number);
+    const correct = answers.filter((v,i)=> v===targetSeq[i]).length;
+    memoryScore = targetSeq.length ? correct / targetSeq.length : 0.7;
+    resultEl.textContent = `Correct: ${correct}/${targetSeq.length}`;
+  };
+
+  // Webcam test (mock emotion/confusion)
+  const cam = document.getElementById('cam');
+  const canvas = document.getElementById('frame');
+  const ctx = canvas.getContext('2d');
+  const camBtn = document.getElementById('btn-start-cam');
+  const capBtn = document.getElementById('btn-capture');
+  const camStatus = document.getElementById('cam-status');
+  let emotionScore = 0.7;
+  camBtn.onclick = async ()=>{
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      cam.srcObject = stream; capBtn.disabled = false; camStatus.textContent='Camera on';
+    }catch{ camStatus.textContent = 'Camera permission denied.' }
+  };
+  capBtn.onclick = async ()=>{
+    ctx.drawImage(cam, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(r=> canvas.toBlob(r, 'image/jpeg'));
+    camStatus.textContent = 'Analyzing...';
+    const form = new FormData(); form.append('image', blob, 'snapshot.jpg');
+    try{
+      const res = await fetch('/api/analyze-emotion', { method:'POST', body: form });
+      const data = await res.json();
+      emotionScore = data.calmness || 0.7; // 0..1
+      camStatus.textContent = `Calmness: ${(emotionScore*100).toFixed(0)}%`;
+    }catch{
+      camStatus.textContent = 'Analysis failed, using mock score.';
+    }
+  };
+
+  nextBtn.onclick = ()=>{
+    if(current<3) setStep(current+1);
+  };
+
+  genBtn.onclick = async ()=>{
+    const body = { voiceScore, memoryScore, emotionScore };
+    const res = await fetch('/api/generate-score', {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    try{ AppUtil.saveResult({ ...data }); }catch{}
+    sessionStorage.setItem('latestResult', JSON.stringify(data));
+    window.location.href = '/results';
+  };
+</script>
+{% endblock %}
